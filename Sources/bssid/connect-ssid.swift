@@ -20,12 +20,13 @@ private func configuration(command: Command) {
 private func execute(flags: Flags, args: [String]) {
     // Execute code here
 
-    if (args.count != 2) {
+    if (args.count < 2 && args.count > 3) {
         print("require a SSID and channel")
         return
     }
     let ssid = args[0]
     let channel = (args[1] as NSString).integerValue
+    let silent = args.count == 3 ? (args[2] as NSString).integerValue : 0
 
     let wifiClient = CWWiFiClient()
     guard let interface = wifiClient.interface(), interface.powerOn() else {
@@ -39,14 +40,30 @@ private func execute(flags: Flags, args: [String]) {
 
     for network in networks {
         if network.ssid ?? "" == ssid && network.wlanChannel?.channelNumber ?? 0 == channel {
-            print("Input WiFi password")
-            let password = String(cString: getpass(""))
+            //print("Input WiFi password")
+            //let password = String(cString: getpass(""))
+            let password:String
+            if silent == 1 {
+                print("Using readline silently...")
+                if let readlineString = readLine() {
+                    password = readlineString
+                } else {
+                    password = ""
+                }
+            } else {
+                print("Input WiFi password")
+                password = String(cString: getpass(""))
+            }
             do {
                 try interface.associate(to: network, password: password)
-            } catch {
+            } catch let error {
                 print(String(format: "Failed connecting to %@, bssid %@"),
                         network.ssid ?? "", network.bssid ?? "")
+                print(error)
             }
+            return
         }
     }
+    
+    print("No network has been found")
 }
